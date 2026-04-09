@@ -1,0 +1,11 @@
+image:
+  repository: 848104065212.dkr.ecr.ap-south-1.amazonaws.com/devops-app
+  tag: v2
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  host: ""
