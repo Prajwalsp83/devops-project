@@ -35,5 +35,21 @@ jobs:
       - name: Build & Push Image
         run: |
           IMAGE_TAG=${{ github.sha }}
-          docker build \
-            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG \
+          IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY
+
+          docker build -t $IMAGE_URI:$IMAGE_TAG ./app
+          docker push $IMAGE_URI:$IMAGE_TAG
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install devops-app ./helm/devops-app \
+            --set image.repository=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY \
+            --set image.tag=$IMAGE_TAG
