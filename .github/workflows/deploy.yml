@@ -5,45 +5,35 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: devops-app
+  CLUSTER_NAME: devops-cluster
+  AWS_ACCOUNT_ID: 848104065212
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-        aws-region: ap-south-1
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION \
+          | docker login --username AWS --password-stdin \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-    - name: Terraform Init & Apply
-      working-directory: terraform
-      run: |
-        terraform init
-        terraform apply -auto-approve
-
-    - name: Login to ECR
-      run: |
-        aws ecr get-login-password --region ap-south-1 \
-        | docker login --username AWS --password-stdin YOUR_ECR_URL
-
-    - name: Build & Push Docker Image
-      run: |
-        docker build -t devops-app ./app
-        docker tag devops-app:latest YOUR_ECR_URL/devops-app:latest
-        docker push YOUR_ECR_URL/devops-app:latest
-
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --name devops-cluster --region ap-south-1
-
-    - name: Deploy with Helm
-      run: |
-        helm upgrade --install devops-app ./helm/devops-app
+      - name: Build & Push Image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build \
+            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG \
