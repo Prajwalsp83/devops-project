@@ -1,11 +1,16 @@
+# Node
 node_modules/
-*.log
-.env
+npm-debug.log
 
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.backup
+.terraform.lock.hcl
 
 # Mac
 .DS_Store
+
+# Env
+.env
+*.log
